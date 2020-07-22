@@ -6,8 +6,10 @@
     "start": "nodemon"
   },
   "license": "MIT",
+  "type": "module",
   "dependencies": {
-    "express": "^4.17.1"
+    "express": "^4.17.1",
+    "socket.io": "^2.3.0"
   },
   "devDependencies": {
     "nodemon": "^2.0.4"

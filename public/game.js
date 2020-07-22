@@ -8,7 +8,34 @@ export default function createGame() {
     }
   }
 
-  function addBall(ballId, x, y, dir) {
+  const observers = []
+
+  function start(command) {
+
+  }
+
+  function subscribe(observerFunction) {
+    observers.push(observerFunction)
+  }
+
+  function notifyAll(command) {
+    for (const observerFunction of observers) {
+      observerFunction(command)
+    }
+  }
+
+
+  function setState(newState) {
+    Object.assign(state, newState)
+  }
+
+  function addBall(command) {
+
+    const ballId = command.ballId
+    const x = command.x
+    const y = command.y
+    const dir = command.dir
+
     state.balls[ballId] = {
       x,
       y,
@@ -16,17 +43,52 @@ export default function createGame() {
       ballSpeedX: 10 * dir,
       ballSpeedY: 10 * dir
     }
+
+    notifyAll({
+      type: 'add-ball',
+      ballId: ballId,
+      x: x,
+      y: y,
+      dir: dir,
+    })
+
   }
 
-  function addPlayer(playerId, x, y) {
+  function addPlayer(command) {
+    const playerId = command.playerId
+    const playerX = command.playerX
+    const playerY = command.playerY
+
     state.players[playerId] = {
-      x,
-      y,
+      x: playerX,
+      y: playerY,
+      width: 20,
+      height: 90,
+      playerSpeed: 10,
+      score: 0,
+    }
+
+    notifyAll({
+      type: 'add-player',
+      playerId: playerId,
+      playerX: playerX,
+      playerY: playerY,
       width: 20,
       height: 90,
       playerSpeed: 10,
       score: 0
-    }
+    })
+  }
+
+  function removePlayer(command) {
+    const playerId = command.playerId
+
+    delete state.players[playerId]
+
+    notifyAll({
+      type: 'remove-player',
+      playerId: playerId
+    })
   }
 
   function moveBall(ballId) {
@@ -65,33 +127,42 @@ export default function createGame() {
     }
   }
 
-  function removeBall(ballId) {
+  function removeBall(command) {
 
-    const ball = state.balls[ballId]
-
-    if (!ball) { return }
+    const ballId = command.ballId
 
     delete state.balls[ballId]
 
+    notifyAll({
+      type: 'remove-ball',
+      ballId: ballId
+    })
+
   }
 
-  function movePlayer(keyPressed) {
+  function movePlayer(command) {
+    notifyAll(command)
 
-    const player1 = state.players[1]
-    const player2 = state.players[2]
+    const acceptedMoves = {
+      ArrowUp(player) {
+        if (player.y - 1 >= 0) {
+          player.y = player.y - player.playerSpeed
+        }
+      },
+      ArrowDown(player) {
+        if (player.y + player.height < state.screen.height) {
+          player.y = player.y + player.playerSpeed
+        }
+      },
+    }
 
-    if ((keyPressed == "w") && (player1.y - 1 >= 0)) {
-      player1.y = player1.y - player1.playerSpeed
-    }
-    if (keyPressed == "s" && (player1.y + player1.height + 1 < state.screen.height)) {
-      player1.y = player1.y + player1.playerSpeed
-    }
+    const keyPressed = command.keyPressed
+    const playerId = command.playerId
+    const player = state.players[playerId]
+    const moveFunction = acceptedMoves[keyPressed]
 
-    if (keyPressed == "ArrowUp" && (player2.y - 1 >= 0)) {
-      player2.y -= player2.playerSpeed
-    }
-    if (keyPressed == "ArrowDown" && (player2.y + player2.height + 1 < state.screen.height)) {
-      player2.y += player2.playerSpeed
+    if (player && moveFunction) {
+      moveFunction(player)
     }
 
   }
@@ -123,17 +194,17 @@ export default function createGame() {
 
   }
 
-  function collision() {
-    score()
-
-  }
-
   return {
     state,
     addBall,
+    removeBall,
     addPlayer,
+    removePlayer,
     moveBall,
     movePlayer,
-    collision
+    start,
+    setState,
+    subscribe,
+    start
   }
 }
