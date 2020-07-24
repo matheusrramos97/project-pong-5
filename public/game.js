@@ -1,16 +1,27 @@
 export default function createGame() {
   const state = {
     players: {},
-    balls: {},
+    ball: {},
     screen: {
       width: 1280,
       height: 720
-    }
+    },
+    config: {}
   }
 
   const observers = []
 
   function start(command) {
+
+    console.log(state.players)
+
+    setInterval(() => gameStarted(), 10)
+
+    function gameStarted() {
+      if (state.ball[1] && state.players[command.player1] && state.players[command.player1]) {
+        calcMoveBall(1, command.player1, command.player2)
+      }
+    }
 
   }
 
@@ -29,27 +40,23 @@ export default function createGame() {
     Object.assign(state, newState)
   }
 
-  function addBall(command) {
+  function addBall() {
 
-    const ballId = command.ballId
-    const x = command.x
-    const y = command.y
-    const dir = command.dir
+    const ball = 1
+    const x = 640
+    const y = 360
 
-    state.balls[ballId] = {
+    state.ball[ball] = {
       x,
       y,
       size: 20,
-      ballSpeedX: 10 * dir,
-      ballSpeedY: 10 * dir
+      speed: 5,
+      dirX: 1,
+      dirY: 1
     }
 
     notifyAll({
       type: 'add-ball',
-      ballId: ballId,
-      x: x,
-      y: y,
-      dir: dir,
     })
 
   }
@@ -91,51 +98,82 @@ export default function createGame() {
     })
   }
 
-  function moveBall(ballId) {
+  function calcMoveBall(Ball, Player1, Player2) {
 
-    const ball = state.balls[ballId]
-    const player2 = state.players[2]
-    const player1 = state.players[1]
+    if (!Ball && !Player1 && !Player2) { return }
 
-    if (!ball) { return }
+    const ball = state.ball[Ball]
+    const player1 = state.players[Player1]
+    const player2 = state.players[Player2]
+    const dirX = ball.dirX
+    const dirY = ball.dirY
+    var NewDirX = dirX
+    var NewDirY = dirY
 
-    ball.x = ball.x + ball.ballSpeedX
-    ball.y = ball.y + ball.ballSpeedY
 
-    if (ball.x + ball.size >= player2.x
-      && ball.y <= player2.y + player2.height
-      && ball.y >= player2.y) {
+    if (Object.keys(state.players).length < 2) { return }
 
-      ball.ballSpeedX = -ball.ballSpeedX
-
+    if ((ball.x + ball.size + ball.speed) > (state.screen.width)) {
+      NewDirX = - dirX
+      addScore({ player: Player1 })
+      console.log("Player 1 Score: " + player1.score)
+    } else if (((ball.x + ball.size) >= (player2.x)) && ((ball.y) > (player2.y)) && ((ball.y + ball.size) < (player2.y + player2.height))) {
+      NewDirX = - dirX
     }
 
-    if (ball.x < player1.x + player1.width &&
+    if ((ball.x + ball.speed) < 0) {
+      NewDirX = -dirX
+      addScore({ player: Player2 })
+      console.log("Player 2 Score: " + player2.score)
+    } else if (ball.x < player1.x + player1.width &&
       ball.y + ball.size > player1.y &&
       ball.y < player1.y + player1.height) {
-
-      ball.ballSpeedX = -ball.ballSpeedX
-
+      NewDirX = - dirX
     }
 
-    if (ball.y + ball.size > state.screen.height) {
-      ball.ballSpeedY = -ball.ballSpeedY
+    if ((ball.y + ball.size + ball.speed) > state.screen.height) {
+      NewDirY = - dirY
+    }
+    if ((ball.y + ball.speed) < 0) {
+      NewDirY = - dirY
     }
 
-    if (ball.y / 2 < 0) {
-      ball.ballSpeedY = -ball.ballSpeedY
-    }
+    var NewBallX = ball.x + ball.speed * NewDirX
+    var NewBallY = ball.y + ball.speed * NewDirY
+
+    moveBall({ NewBallX, NewBallY, NewDirX, NewDirY })
   }
 
-  function removeBall(command) {
+  function moveBall(command) {
 
-    const ballId = command.ballId
+    const newBallX = command.NewBallX
+    const newBallY = command.NewBallY
+    const newDirX = command.NewDirX
+    const newDirY = command.NewDirY
 
-    delete state.balls[ballId]
+
+    const ball = state.ball[1]
+
+    ball.x = newBallX
+    ball.y = newBallY
+    ball.dirX = newDirX
+    ball.dirY = newDirY
+
+    notifyAll({
+      type: 'move-ball',
+      NewBallX: newBallX,
+      NewBallY: newBallY,
+      newDirX,
+      newDirY
+    })
+  }
+
+  function removeBall() {
+
+    delete state.ball[1]
 
     notifyAll({
       type: 'remove-ball',
-      ballId: ballId
     })
 
   }
@@ -167,31 +205,32 @@ export default function createGame() {
 
   }
 
-  function score() {
+  function addScore(command) {
+    const player = command.player
 
-    const player1 = state.players[1]
-    const player2 = state.players[2]
+    state.players[player].score++
 
-    for (const ballId in state.balls) {
+    notifyAll({
+      type: 'add-score',
+      player
+    })
+  }
 
-      const ball = state.balls[ballId]
+  function setPlayers(command) {
 
-      if (ball.x + ball.size > state.screen.width) {
-        player1.score += 1
-        //console.log("Player 1 Score: " + player1.score)
-        removeBall(ballId)
-        addBall(1, 640, 360, -1)
-      }
+    const player1 = command.player1
+    const player2 = command.player2
 
-      if (ball.x / 2 < 0) {
-        player2.score += 1
-        //console.log("Player 2 Score: " + player2.score)
-        removeBall(ballId)
-        addBall(1, 640, 360, +1)
-      }
-
+    state.config = {
+      player1: command.player1,
+      player2: command.player2
     }
 
+    notifyAll({
+      type: 'set-players',
+      player1,
+      player2
+    })
   }
 
   return {
@@ -205,6 +244,8 @@ export default function createGame() {
     start,
     setState,
     subscribe,
-    start
+    start,
+    addScore,
+    setPlayers
   }
 }

@@ -30,9 +30,8 @@
     const game = createGame()
     const keyboardListener = createKeyboardListener(document)
 
-    game.addBall(1, 640, 360, +1)
-    game.addPlayer(1, 10, 315)
-    game.addPlayer(2, 1250, 315)
+    var Player1Score = 0
+    var Player2Score = 0
 
     const socket = io()
 
@@ -48,7 +47,6 @@
     socket.on("setup", (state) => {
       const playerId = socket.id
       game.setState(state)
-
       keyboardListener.registerPlayerId(playerId)
       keyboardListener.subscribe(game.movePlayer)
       keyboardListener.subscribe((command) => {
@@ -75,26 +73,34 @@
     })
 
     socket.on('add-ball', (command) => {
-      console.log(`Receiving ${command.type} -> ${command.ballId}`)
+      console.log(`Receiving ${command.type}`)
       game.addBall(command)
     })
 
     socket.on('remove-ball', (command) => {
-      console.log(`Receiving ${command.type} -> ${command.ballId}`)
+      console.log(`Receiving ${command.type} -> ${command.ball}`)
       game.removeBall(command)
     })
 
     socket.on('move-ball', (command) => {
-      console.log(`Receiving ${command.type} -> ${command.player2}`)
-      game.removeBall(command)
+      //console.log(`Receiving ${command.type} -> X: ${command.NewBallX} Y: ${command.NewBallY}`)
+      game.moveBall(command)
     })
 
-    socket.on('start', (command) => {
-      console.log(`Receiving ${command.type} -> ${command.ballId}`)
-      game.start(command)
+    socket.on('add-score', (command) => {
+      //console.log(`Receiving ${command.type} -> ${command.player}`)
+      game.addScore(command)
     })
 
+    socket.on('set-players', (command) => {
+      //console.log(`Receiving ${command.type} -> Player 1: ${command.player1}, Player 2: ${command.player2}`)
+      game.setPlayers(command)
+    })
 
+    if (Object.keys(game.state.players).length > 2) {
+      Player1Score = game.state.players[game.state.config.player1].score
+      Player2Score = game.state.players[game.state.config.player2].score
+    }
 
   </script>
 </body>
